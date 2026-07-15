@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Implementation Audit"
+  short_description: "Audit design compliance, fix, and re-audit"
+  default_prompt: "Use $audit-design-implementation to audit this project against the specified design documents, apply fixes through fresh review sessions, and produce a final report."
