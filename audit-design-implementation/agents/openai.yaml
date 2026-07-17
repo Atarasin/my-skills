@@ -1,4 +1,4 @@
 interface:
   display_name: "Design Implementation Audit"
-  short_description: "Audit design compliance, fix, and re-audit"
-  default_prompt: "Use $audit-design-implementation to audit this project against the specified design documents, apply fixes through fresh review sessions, and produce a final report."
+  short_description: "Audit and merge fixes through isolated worktrees"
+  default_prompt: "Use $audit-design-implementation to audit this project against the specified design documents. Run every audit cycle in a fresh session and a new Git worktree, merge each successful cycle back into the caller's original branch, clean up integrated worktrees, and produce the final Chinese report through a finalization worktree."

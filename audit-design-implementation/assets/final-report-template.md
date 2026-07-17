@@ -1,56 +1,60 @@
-# Design Implementation Audit Report
+# 设计实现审计报告
 
-## Audit Metadata
+## 审计元数据
 
-- Project:
-- Design documents:
-- Review scope:
-- Started:
-- Completed:
-- Cycles run:
-- Baseline:
-- Overall verdict: `Compliant | Compliant with limitations | Not compliant`
+- 项目：
+- 设计文档：
+- 评审范围：
+- 开始时间：
+- 完成时间：
+- 审计轮次：
+- 基线：
+- 总体结论：`Compliant | Compliant with limitations | Not compliant`
 
-## Executive Summary
+## 执行摘要
 
-Summarize final compliance, the most important corrections, and any remaining
-limitations.
+概述最终符合性、最重要的修复内容，以及仍然存在的限制。
 
-## Requirement Traceability
+## 需求追踪
 
-| ID | Design requirement | Source | Final implementation evidence | Status |
+| ID | 设计要求 | 来源 | 最终实现证据 | 状态 |
 | --- | --- | --- | --- | --- |
 
-Use `Compliant`, `Partial`, `Noncompliant`, or `Blocked` for requirement status.
+需求状态使用 `符合`、`部分符合`、`不符合` 或 `阻塞`。
 
-## Cycle Results
+## 各轮结果
 
-| Cycle | Findings | Changes applied | Verification | Verdict |
+| 轮次 | 修复前发现 | 已应用修改 | 验证结果 | 轮次结论 |
 | --- | --- | --- | --- | --- |
 
-## Changes Applied
+## Worktree 隔离与合并
 
-| File or module | Behavioral change | Requirement IDs | Cycle |
+| 轮次 | 临时分支 | Worktree 路径 | 轮次提交 | 合并结果 | 合并后验证 | 清理状态 |
+| --- | --- | --- | --- | --- | --- | --- |
+
+记录每轮是否成功合并回原分支。若保留了未合并分支或 worktree，必须说明原因和恢复路径。
+
+## 已应用修改
+
+| 文件或模块 | 行为变更 | 需求 ID | 轮次 |
 | --- | --- | --- | --- |
 
-## Verification
+## 验证结果
 
-| Command or check | Result | Cycle | Notes |
+| 命令或检查 | 结果 | 轮次 | 说明 |
 | --- | --- | --- | --- |
 
-## Remaining Deviations And Risks
+## 剩余偏差与风险
 
-| Severity | Requirement ID | Evidence | Reason unresolved | Next action |
+| 严重程度 | 需求 ID | 证据 | 未解决原因 | 后续行动 |
 | --- | --- | --- | --- | --- |
 
-Write `None` when no deviations remain.
+没有剩余偏差时填写“无”。
 
-## Preserved Baseline Changes
+## 基线变更保护
 
-Record relevant user-owned changes present before the audit and confirm that the
-workflow did not revert them.
+记录审计开始前由用户持有的相关变更，并确认本流程没有回退这些变更。
 
-## Conclusion
+## 结论
 
-State the final verdict and whether further user decisions or engineering work
-are required.
+明确最终结论，并说明是否仍需用户决策或后续工程工作。
