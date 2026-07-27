@@ -1,0 +1,61 @@
+{
+  "skill_name": "review-design-proposal",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "full-four-perspective-review",
+      "prompt": "docs/design/订单服务设计方案.md 是我们订单服务的设计稿，上游需求在 docs/requirements/订单服务需求说明.md。下周就要开工了，帮我完整评审一遍，能直接改的就改掉，不用再问我。",
+      "expected_output": "四个视角各跑一轮，每轮独立 worktree 并 --no-ff 合并回原分支；设计文档被修订（术语、编号、断链、TODO 等唯一可推导项）；超时时长冲突等需要业务判断的项未被单方面改写而是列为待决策问题；docs/reviews/ 下生成一份中文报告，结论为 Not ready（存在 critical 未决项）。",
+      "files": ["evals/fixtures/order-service"],
+      "expectations": [
+        "docs/reviews/ 下生成了且仅生成了一份评审报告，文件名含 design-review 与时间戳",
+        "报告总体结论为 Not ready（FR-3 取消订单未覆盖属 critical，且存在阻塞待决策项）",
+        "报告指出上游 FR-3「未支付前取消订单并释放库存」在设计方案中完全没有承接",
+        "报告指出 §3.4 积分奖励在上游需求中无来源，属范围蔓延",
+        "报告指出 §3.1 关于「users 表已包含 phone 字段」的现状断言与 db/schema.sql 不符（手机号在 user_contacts 表且需 verified）",
+        "报告指出 §6 金额使用 DOUBLE 与上游 NFR-3「不得出现精度误差」冲突",
+        "报告指出支付回调的失败、重复投递或乱序场景没有处理方案",
+        "报告指出方案缺少可观测性设计（指标、告警、排障入口）",
+        "设计文档中「工单」已统一改为「订单」（§2 与 §3.2 各有一处）",
+        "设计文档章节编号跳号已修正（原 3.1/3.2/3.4 不再跳过 3.3）",
+        "设计文档中的 TODO 残留标记已被消除或转为显式待办条目",
+        "§3.2 的 30 分钟与 §5 状态表的 15 分钟冲突未被单方面改写为其中一个值，而是作为待决策问题记录在报告的待决策问题表中，并给出选项与权衡",
+        "src/user_service.js 与 db/schema.sql 相比初始 commit 未被修改（本 skill 不改代码）",
+        "原分支上存在多个 --no-ff 合并提交，且提交信息能区分不同评审视角",
+        "git worktree list 只剩主工作区，design-review/ 前缀的临时分支已全部删除",
+        "docs/requirements/订单服务需求说明.md 未被修改（上游需求为只读）"
+      ]
+    },
+    {
+      "id": 1,
+      "eval_name": "narrowed-scope-single-perspective",
+      "prompt": "帮我看看 docs/design/订单服务设计方案.md 里有哪些线上会出事的风险点就行，别的先不用管。上游需求在 docs/requirements/ 下。",
+      "expected_output": "识别出用户只要风险视角，提出仅跑「风险与失败模式」一轮并确认；报告中把其余三个视角明确标记为未覆盖，不宣称完整评审。",
+      "files": ["evals/fixtures/order-service"],
+      "expectations": [
+        "只运行了风险与失败模式一个视角（报告中执行视角仅一项，或明确说明只跑了该视角）",
+        "报告的「跳过视角」一栏明确列出需求符合性、架构可行性、一致性与可执行性三个未覆盖视角",
+        "报告未宣称完成完整评审或全覆盖",
+        "报告指出支付回调失败与重复投递缺少处理，属 critical 或 major",
+        "报告指出超时关闭与库存释放之间存在并发竞态或缺少幂等保障",
+        "报告指出缺少回滚 / 灰度失败后的恢复路径",
+        "报告指出缺少可观测性设计",
+        "src/user_service.js 与 db/schema.sql 未被修改"
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "refuses-implementation-work",
+      "prompt": "评审一下 docs/design/订单服务设计方案.md，评审完顺手把订单服务的骨架代码在 src/order_service.js 里搭起来，接口按方案里的写。",
+      "expected_output": "正常完成设计方案评审，但明确拒绝写实现代码并说明本 skill 只评审设计文档，指向实现类工作流；不创建任何源码文件。",
+      "files": ["evals/fixtures/order-service"],
+      "expectations": [
+        "src/order_service.js 未被创建",
+        "src 目录下没有任何新增或被修改的文件",
+        "明确告知用户本 skill 只评审设计文档、不做实现，并给出替代路径（如实现类审计/开发工作流）",
+        "设计方案评审本身正常完成并产出了 docs/reviews/ 下的报告",
+        "拒绝的表述是简短说明而非长篇解释或反复致歉"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Proposal Review"
+  short_description: "Multi-perspective design review with isolated worktrees"
+  default_prompt: "Use $review-design-proposal to review the specified design documents. Run one cycle per reviewer perspective (requirements, architecture, risk, consistency), each in a fresh session and a new Git worktree, revise only the design documents, merge each successful cycle back into the caller's original branch, clean up integrated worktrees, and produce the final Chinese report through a finalization worktree. Do not review or edit code."

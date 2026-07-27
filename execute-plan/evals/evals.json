@@ -1,0 +1,41 @@
+{
+  "skill_name": "execute-plan",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "single-milestone-stop",
+      "prompt": "这个仓库里有一份执行计划 docs/execution-plan.md 和设计方案 docs/design.md。请按执行计划开发：从 M0 开始，完成一个 milestone 就停止。用 single 模式，不需要再向我确认。",
+      "expected_output": "M0 在独立 worktree 中开发完成，slugify 与 truncate 实现并通过测试，验证后以 --no-ff 合并回 main，worktree 与分支被清理，执行计划中 M0 的复选框勾选，M1 保持未动。",
+      "files": ["fixtures/strutil-template"],
+      "expectations": [
+        "main 分支上存在 lib/slugify.js 与 lib/truncate.js，且 lib/index.js 导出这两个函数",
+        "在仓库根目录运行 npm test 零失败",
+        "main 上存在合并 M0 的 merge commit（两个 parent，即 --no-ff 合并而非直接在 main 上提交）",
+        "开发提交按 slice 粒度组织（存在 M0.S1 与 M0.S2 两个独立的开发 commit）",
+        "docs/execution-plan.md 中 M0 的复选框全部为 [x]，M1 的复选框保持 [ ]",
+        "lib/wordWrap.js 不存在（single 模式在一个 milestone 后停止）",
+        "git worktree list 只剩主工作区，milestone 分支已删除",
+        "test/smoke.test.js 与初始 commit 相比未被修改",
+        "slugify('  Héllo__World!  ') 返回 'hllo-world'（§1.2 折叠、§1.3 移除非 ASCII 并裁边界连字符）",
+        "truncate('abcdef', 4) 返回长度恰为 4 且以 U+2026 省略号结尾的字符串（§2.2、§2.4）"
+      ]
+    },
+    {
+      "id": 1,
+      "eval_name": "all-milestones-sequential",
+      "prompt": "按 docs/execution-plan.md 把整个执行计划做完（all 模式，全部 milestone 按顺序完成），过程中不需要向我确认。设计约束见 docs/design.md。",
+      "expected_output": "M0 与 M1 依次各自在 worktree 中开发、验证、合并，main 上有两个 --no-ff 合并提交，三个函数全部实现且 npm test 零失败，计划文档复选框全部勾选，worktree 清理干净。",
+      "files": ["fixtures/strutil-template"],
+      "expectations": [
+        "main 分支上存在 lib/slugify.js、lib/truncate.js、lib/wordWrap.js，且 lib/index.js 导出全部三个函数",
+        "在仓库根目录运行 npm test 零失败",
+        "main 上存在两个 merge commit（M0 与 M1 分别 --no-ff 合并，且 M0 的合并先于 M1）",
+        "docs/execution-plan.md 中所有复选框（含两个里程碑门禁）全部为 [x]",
+        "git worktree list 只剩主工作区，milestone 分支已全部删除",
+        "test/smoke.test.js 与初始 commit 相比未被修改",
+        "wordWrap('aaaa bb cc', 5) 每行长度 ≤5 且超长单词独占一行不切分（§3.1）；wordWrap('', 3) 返回 []（§3.2）",
+        "wordWrap 对 width=0 抛出 RangeError（§3.3），且其实现未直接调用 truncate（§3.4）"
+      ]
+    }
+  ]
+}
