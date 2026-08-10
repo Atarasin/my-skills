@@ -259,21 +259,23 @@ graph LR
 
 ## 第四步：输出文件
 
-1. **写入路径**：`~/doc-visualizer-output/<filename>.html`
+1. **写入路径**：默认输出到**当前项目文件夹**（即当前工作目录）下的 `.doc-visualizer-output/` 目录：
    ```bash
-   mkdir -p ~/doc-visualizer-output
+   mkdir -p .doc-visualizer-output
    ```
+   输出文件：`.doc-visualizer-output/<filename>.html`
+   > 默认一律使用当前工作目录下的 `.doc-visualizer-output/`；仅当用户明确指定了其他输出路径时，遵循用户指定。
 
 2. **文件名规则**：`<文档日期>_<文档主题简称>.html`，例如 `2026-08-08_概念数据接入.html`
 
 3. **打开文件**（WSL/Linux 优先 xdg-open，若失败提示路径）：
    ```bash
-   xdg-open ~/doc-visualizer-output/xxx.html 2>/dev/null || \
-   explorer.exe "$(wslpath -w ~/doc-visualizer-output/xxx.html)" 2>/dev/null || \
-   echo "请在浏览器中打开: ~/doc-visualizer-output/xxx.html"
+   xdg-open .doc-visualizer-output/xxx.html 2>/dev/null || \
+   explorer.exe "$(wslpath -w "$(pwd)/.doc-visualizer-output/xxx.html")" 2>/dev/null || \
+   echo "请在浏览器中打开: $(pwd)/.doc-visualizer-output/xxx.html"
    ```
 
-4. 告知用户文件路径。
+4. 告知用户文件路径（绝对路径）。
 
 ---
 

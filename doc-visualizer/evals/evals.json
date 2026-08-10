@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "把这两份概念数据接入方案文档整合成一个自包含的交互式 HTML 仪表板，帮助研究者快速理解整体方案：\n- 设计方案：/home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-08_概念数据接入方案.md\n- 执行方案：/home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-08_概念数据接入执行方案.md\n\n要求：涵盖红线约束、里程碑路线图、四层架构、假设追踪、雷区清单。输出到 ~/doc-visualizer-output/2026-08-08_概念数据接入.html",
+      "prompt": "把这两份概念数据接入方案文档整合成一个自包含的交互式 HTML 仪表板，帮助研究者快速理解整体方案：\n- 设计方案：/home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-08_概念数据接入方案.md\n- 执行方案：/home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-08_概念数据接入执行方案.md\n\n要求：涵盖红线约束、里程碑路线图、四层架构、假设追踪、雷区清单。输出到 .doc-visualizer-output/2026-08-08_概念数据接入.html",
       "expected_output": "一个自包含 HTML 文件，含标签页导航、里程碑可展开卡片、红线警告卡、假设状态卡、架构层叠图、Mermaid 依赖图，中文正确渲染",
       "files": [
         "/home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-08_概念数据接入方案.md",
@@ -55,7 +55,7 @@
     },
     {
       "id": 2,
-      "prompt": "把 /home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-02_市场观测器设计文档.md 转成可视化 HTML 仪表板，输出到 ~/doc-visualizer-output/2026-08-02_市场观测器设计.html",
+      "prompt": "把 /home/atarasin/projects/select-stock-pro/market_observer/docs/2026-08-02_市场观测器设计文档.md 转成可视化 HTML 仪表板，输出到 .doc-visualizer-output/2026-08-02_市场观测器设计.html",
       "expected_output": "自包含 HTML 文件，展示设计文档的架构和关键决策",
       "files": [],
       "assertions": [
