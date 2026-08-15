@@ -8,6 +8,12 @@
 #   - codex 曾把仓库 AGENTS.md 当自己的操作指令执行（bootstrap/recall/memory_write，单轮烧 1.27M token 且产生记忆写副作用）
 #     → 默认隔离：清空 MCP 服务器 + 关闭项目指令文件自动摄入（AGENTS.md 仍作为评审材料被显式列入阅读清单）
 #   - 重试覆盖日志 → 每次尝试独立日志 round<N>-codex.attempt<K>.log，round<N>-codex.log 始终指向最近一次
+#
+# 2026-08-15 实测驱动的硬化（3 轮评审一份迁移方案）：
+#   - 第三方 provider 的 env_key 认证模式：codex login 已登录仍要求环境变量（两条认证路径），
+#     缺失时以 "Missing environment variable" 直接退出 → 启动前从 ~/.codex/auth.json 自动注入本进程
+#   - 评审运行期间方案文件被修改（读写竞态）→ 结束时对比方案哈希，被改过即告警
+#   - Windows Git Bash 可能无 python3 → 探测 fallback 到 python
 set -uo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -84,6 +90,37 @@ die() { echo "错误: $*" >&2; exit "${2:-1}"; }
 [[ "$RETRIES" =~ ^[0-9]+$ ]] || die "--retries 必须是非负整数" 64
 [[ "$MODE" == "repo" || "$MODE" == "text" ]] || die "--mode 只能是 repo 或 text" 64
 command -v codex >/dev/null || die "找不到 codex 命令"
+
+# python 解释器：Windows Git Bash 常无 python3，fallback 到 python
+PY_BIN="python3"
+command -v python3 >/dev/null 2>&1 || PY_BIN="python"
+
+# ---------- 认证预检：第三方 provider 的 env_key 模式 ----------
+# config.toml 配 env_key = "XXX" 时，codex exec 要求该环境变量存在——与 codex login
+# 登录态是两条路，已登录也会因缺变量而失败（"Missing environment variable"）。
+# 从 ~/.codex/auth.json 把缺失的 env_key 注入本进程：只 export 给子进程，不打印值、不落盘。
+ensure_codex_auth() {
+  local cfg="$HOME/.codex/config.toml" auth="$HOME/.codex/auth.json"
+  [[ -f "$cfg" ]] || return 0
+  local provider envkey
+  provider="$(grep -m1 '^model_provider' "$cfg" | sed 's/.*= *"\([^"]*\)".*/\1/')"
+  [[ -n "$provider" ]] || return 0
+  envkey="$(sed -n "/^\[model_providers\.$provider\]/,/^\[/p" "$cfg" | grep -m1 '^env_key' | sed 's/.*"\([^"]*\)".*/\1/')"
+  [[ -n "$envkey" ]] || return 0
+  [[ -n "${!envkey:-}" ]] && return 0
+  if [[ -f "$auth" ]]; then
+    local value
+    value="$("$PY_BIN" -c "import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2],''))" "$auth" "$envkey" 2>/dev/null)" || value=""
+    if [[ -n "$value" ]]; then
+      export "$envkey=$value"
+      echo "认证: provider '$provider' 要求环境变量 $envkey，已从 ~/.codex/auth.json 注入本进程"
+      return 0
+    fi
+  fi
+  echo "警告: codex provider '$provider' 要求环境变量 $envkey，且 ~/.codex/auth.json 无对应 key。" >&2
+  echo "  先 codex login 或手动 export $envkey，否则本次评审会以认证错误退出。" >&2
+}
+ensure_codex_auth
 
 if (( ROUND > 3 )); then
   die "轮次上限是 3。第 3 轮之后仍未收敛说明方案存在需要人判断的根本分歧，应该找用户拍板，而不是继续刷评审。"
@@ -188,6 +225,9 @@ fi
 # 瞬时错误特征：provider 限流/容量/网关抖动。命中才值得重试；其余错误立即失败。
 TRANSIENT_RE='at capacity|rate.?limit|too many requests|429|overloaded|try a different model|temporarily unavailable|502 Bad Gateway|503 Service|504 Gateway|connection reset|stream disconnected'
 
+# 评审开始前记录方案哈希：codex 读文件期间方案被改，本轮结论对最新正文即失真
+PLAN_HASH_BEFORE="$(sha1sum "$PLAN" 2>/dev/null | cut -d' ' -f1)"
+
 effort_down() {
   case "$1" in
     xhigh) echo high ;;
@@ -272,12 +312,21 @@ while (( attempt <= MAX_ATTEMPTS )); do
     die "瞬时故障重试耗尽（$MAX_ATTEMPTS 次尝试）。按 SKILL.md「降级」执行：告知用户后改用内部独立复评（喂 $PROMPT），或等 provider 恢复后重跑本命令。" 4
   fi
 
+  if grep -qi 'Missing environment variable' "$ATTEMPT_LOG"; then
+    echo "提示: 这是 provider env_key 认证问题（见 ~/.codex/config.toml 的 [model_providers.*] 段）。脚本已尝试从 auth.json 注入仍失败，请手动 export 对应环境变量后重跑。" >&2
+  fi
   echo "--- codex 日志末尾 ---" >&2
   tail -30 "$ATTEMPT_LOG" >&2
   die "codex 退出码 $rc（非瞬时错误，不重试）。完整日志: $ATTEMPT_LOG"
 done
 
 elapsed=$((SECONDS - total_start))
+
+# 方案文件在评审期间被修改？→ 本轮结论对最新正文可能失真
+PLAN_HASH_AFTER="$(sha1sum "$PLAN" 2>/dev/null | cut -d' ' -f1)"
+if [[ -n "$PLAN_HASH_BEFORE" && "$PLAN_HASH_BEFORE" != "$PLAN_HASH_AFTER" ]]; then
+  echo "警告: 方案文件在评审运行期间被修改——codex 读到的可能是中间版本，本轮结论对最新正文可能失真。处置时核对差异；改动实质影响结论则重跑本轮。" >&2
+fi
 
 if [[ ! -s "$RESULT" ]]; then
   echo "--- codex 日志末尾 ---" >&2
@@ -293,7 +342,7 @@ if grep -q '^mcp: ' "$LOG"; then
 fi
 
 # ---------- 校验 + 摘要 ----------
-python3 - "$RESULT" "$ROUND" "$elapsed" <<'PY'
+"$PY_BIN" - "$RESULT" "$ROUND" "$elapsed" <<'PY'
 import json, sys
 
 path, rnd, elapsed = sys.argv[1], sys.argv[2], sys.argv[3]
