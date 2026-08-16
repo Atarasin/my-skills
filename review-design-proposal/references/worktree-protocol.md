@@ -26,8 +26,11 @@ opinion repeated four times.
 4. Require the original worktree to be clean, including relevant untracked
    files. Design documents are frequently mid-edit, so check the documents under
    review specifically and name the dirty paths when refusing. Ask the user to
-   commit or stash. Do not commit, stash, reset, or discard user-owned changes
-   on their behalf — an uncommitted design edit is often the user's actual
+   commit or stash. With explicit user authorization, the coordinator may
+   instead commit the staged set **verbatim** — no content changes — as the
+   review baseline, recording that in the report's baseline-protection section.
+   Never commit, stash, reset, or discard user-owned changes without that
+   authorization — an uncommitted design edit is often the user's actual
    current thinking, and losing it is worse than any finding the review produces.
 5. Create a unique `run_id` and a temporary parent:
 
@@ -46,6 +49,12 @@ opinion repeated four times.
    design-review/<design-slug>/<run_id>/report
    ```
 
+7. Probe verification tooling once — `rg`, a Mermaid CLI (`mmdc`), PlantUML,
+   `pandoc` — and record availability in the run metadata. Pass the list to
+   every worker so a check whose tool is missing is recorded
+   `n-a (tool unavailable, confirmed at preflight)` instead of being
+   rediscovered per cycle.
+
 Request authorization for `git worktree`, staging, commits, merges, branch
 deletion, and cleanup before executing them. Never bypass repository hooks or
 signing policy unless the user explicitly authorizes that exception.
@@ -60,6 +69,12 @@ and quietly miss half the design.
 
 - Resolve every relative link and image path in the documents under review, and
   identify which targets are absent from a fresh worktree.
+- Resolve every **upstream requirement source** against a fresh worktree as well
+  (`git ls-files --error-unmatch`, or `test -f` in a scratch worktree). Sources
+  that exist only through local symlinks or gitignored material (for example
+  `.agents/skills/…` entries) are absent for the worker: pass the tracked
+  equivalent path instead (for example `skills/<name>/SKILL.md`) and state the
+  mapping explicitly in the worker prompt.
 - Copy small, non-secret ignored files in only when the repository permits it.
   Record the source and verify they stay untracked.
 - Link large asset directories read-only. Never redirect a worker's writes

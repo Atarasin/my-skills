@@ -98,7 +98,10 @@ recovery. It also covers the report worktree. The loop itself:
 
 1. Preflight once. Then, for each perspective in order:
 2. Create a branch and worktree from the current original-branch HEAD.
-3. Spawn a fresh worker session (below) and wait for its cycle record.
+3. Spawn a fresh worker session (below) and wait for its cycle record. Save the
+   returned record verbatim to `<run_root>/cycle-N-record.md` — the coordinator
+   writes it (the worker stays confined to its worktree), later cycles never
+   read it, and the final report references these artifacts.
 4. Inspect the diff, verify, stage, and commit the cycle.
 5. Merge back into the original branch, re-verify, clean up the worktree.
 6. After the last cycle, write the report through the report worktree.
@@ -238,12 +241,21 @@ Ordinary text tooling is enough:
 # unresolved markers in the documents under review
 rg -n 'TODO|TBD|FIXME|待定|待补充|\?\?\?' <doc-paths>
 
-# relative links, then check each target exists
-rg -no '\]\(([^)#][^)]*)\)' -r '$1' <doc-paths>
+# relative links: print each target, then check existence.
+# Keep this example free of '$' capture replacements (-r ...) — skill
+# placeholder expansion rewrites them, and -n line prefixes pollute captures.
+rg -o --no-line-number '\]\(([^)#][^)]+)\)' <doc-paths>
 
 # inbound references to a document that was revised
 rg -n '<revised-doc-basename>' --glob '*.md' <project-root>
 ```
+
+The coordinator probes check-tool availability once at preflight (see
+`references/worktree-protocol.md`) and includes the result in the worker prompt.
+A check whose tool is missing is recorded `n-a (tool unavailable, confirmed at
+preflight)` instead of being rediscovered every cycle; where a structural manual
+fallback exists (for example Mermaid block/node/edge balance), run it and say so
+in Notes.
 
 Record every check as run, passed, failed, or not applicable. A check that could
 not run is not a passing check, and reporting it as one is how a review comes to
@@ -280,6 +292,11 @@ Require every worker's final response to contain:
 
 Claim status uses `covered`, `partially covered`, `uncovered`, or `blocked`.
 
+The `Blocking?` column uses exactly one of: `blocking-now` (the proposal's
+foundation is undecided; later perspectives cannot meaningfully review until the
+user decides), `blocking-before:<phase>` (implementation may start; the decision
+is due before the named phase or milestone), or `no`.
+
 Use `clean` only when this perspective found nothing actionable, no document
 changed, and verification passed. Use `revised` when any design document changed,
 even if the reviewer believes the proposal is now sound. Use `blocked` when a
@@ -295,11 +312,14 @@ Do not feed them into the next cycle's worker prompt. A later perspective must
 reach its own conclusions, and an inherited question steers it toward the earlier
 reviewer's framing of the problem.
 
-Escalate to the user mid-run, before the final report, when a question is marked
-blocking and the later perspectives would otherwise be reviewing a proposal whose
-foundation is undecided. Present the options and trade-offs the reviewer
-recorded, ask for the decision, then continue — or record it unresolved and
-continue with the unaffected scope.
+Escalate to the user mid-run, before the final report, only for questions marked
+`blocking-now` — the proposal's foundation is undecided and the later
+perspectives would otherwise be reviewing text whose premise is open. Present
+the options and trade-offs the reviewer recorded, ask for the decision, then
+continue — or record it unresolved and continue with the unaffected scope.
+Questions marked `blocking-before:<phase>` do not interrupt the run: the
+decision deadline is a later named phase, so they travel to the final report
+like any other open question.
 
 ## Cycle Limit And Convergence
 
@@ -354,8 +374,10 @@ Set the overall verdict to exactly one of:
 - `Ready for implementation`
 - `Ready with conditions` — remaining work is bounded and named: open questions
   awaiting a user decision, or minor findings that do not block a start.
-- `Not ready` — a critical finding survives, a blocking open question is
-  unresolved, or a selected perspective never ran.
+- `Not ready` — a critical finding survives, a `blocking-now` open question is
+  unresolved, or a selected perspective never ran. An unresolved question that
+  blocks only a later named phase (`blocking-before:<phase>`) belongs under
+  `Ready with conditions`, with the phase deadline named.
 
 The report must include the perspective, branch, worktree, cycle commit, merge
 result, post-merge verification, and cleanup status for every cycle, plus the
