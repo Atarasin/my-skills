@@ -144,6 +144,10 @@ files, and validation output. Reconcile the worker verdict with actual state:
 
 - `clean` requires no implementation changes and passing relevant checks.
 - `modified` requires an implementation or test change.
+- `modified (cosmetic-only)` additionally requires the diff to contain only
+  comment, documentation, or formatting changes; inspect every hunk and
+  reclassify as plain `modified` when any behavioral, interface, build, or
+  test change is present.
 - `blocked` requires a concrete unresolved blocker.
 
 The coordinator, not the worker, owns Git integration:
@@ -153,8 +157,9 @@ The coordinator, not the worker, owns Git integration:
 3. Stage only the reviewed cycle changes.
 4. Verify hydrated local-only files and unrelated files are not staged.
 5. Run staged diff checks and repository-required hooks.
-6. For a `modified` cycle, create one descriptive cycle commit on the temporary
-   branch. Do not amend or rewrite existing history.
+6. For a `modified` or `modified (cosmetic-only)` cycle, create one
+   descriptive cycle commit on the temporary branch. Do not amend or rewrite
+   existing history.
 
 If the cycle record says `clean` but files changed, or says `modified` without a
 reviewable change, resolve the mismatch before integration.
@@ -252,13 +257,16 @@ Require every worker's final response to contain:
 | Severity | Requirement ID | Reason | Recommended next action |
 
 ### Cycle Verdict
-`clean`, `modified`, or `blocked`
+`clean`, `modified`, `modified (cosmetic-only)`, or `blocked`
 ```
 
 Use `clean` only when there are no actionable deviations, no implementation
 changes, and relevant checks pass. Use `modified` when code, tests, build files,
 or implementation documentation changed, even if the worker believes the
-result is now compliant. Use `blocked` when a document conflict, missing
+result is now compliant. Use `modified (cosmetic-only)` when every applied
+change is limited to comments, documentation, whitespace, or formatting — no
+behavior, interface, build, or test change — and the record justifies each
+change as cosmetic. Use `blocked` when a document conflict, missing
 dependency, unsafe ambiguity, environment failure, or integration failure
 prevents completion.
 
@@ -267,6 +275,12 @@ prevents completion.
 Run at most three audit cycles.
 
 - Stop after a successfully integrated `clean` cycle.
+- Stop after a successfully integrated `modified (cosmetic-only)` cycle: a
+  fresh reviewer found nothing substantive left to change, and a
+  comment/documentation/format-only diff cannot alter behavior. Treat it as
+  convergence evidence and record the rationale in the final report. If the
+  cosmetic classification itself is in doubt, reclassify the cycle as
+  `modified` instead (see Inspect And Commit The Cycle) and continue.
 - After a successfully integrated `modified` cycle, create a new branch,
   worktree, and fresh session for the next cycle unless it was cycle 3.
 - After a `blocked` cycle, continue only when another independent cycle could
