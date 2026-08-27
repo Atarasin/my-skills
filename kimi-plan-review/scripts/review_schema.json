@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["overall", "prior_round_status", "findings", "unverifiable"],
+  "properties": {
+    "overall": {
+      "type": "string",
+      "description": "两三句话的总体判断：这份方案能否按现状执行；如果不能，最致命的是哪一条。"
+    },
+    "prior_round_status": {
+      "type": "array",
+      "description": "对上一轮每条意见的复核结论。第 1 轮为空数组。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "note"],
+        "properties": {
+          "id": {"type": "string", "description": "上一轮的 finding id，如 R1-F2"},
+          "status": {
+            "type": "string",
+            "enum": ["resolved", "unresolved", "withdrawn"],
+            "description": "resolved=修订已解决；unresolved=仍存在（须在 findings 里给出新证据）；withdrawn=复看后认为本条原本就不成立，撤回"
+          },
+          "note": {"type": "string", "description": "一句话说明依据"}
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "本轮的缺陷清单。宁缺毋滥：没有证据的猜测放 unverifiable，不要放这里。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "severity", "kind", "title", "why", "evidence", "suggestion", "is_new", "relates_to"],
+        "properties": {
+          "id": {"type": "string", "description": "本轮唯一编号，格式 R<轮次>-F<序号>，如 R1-F1"},
+          "severity": {
+            "type": "string",
+            "enum": ["P0", "P1", "P2"],
+            "description": "P0=按此方案执行会失败或得出错误结论；P1=会导致返工或显著偏离目标；P2=改进建议，不做也能跑通"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["repo-mismatch", "internal-logic", "missing-coverage", "unfalsifiable", "scope"],
+            "description": "repo-mismatch=方案与仓库现状/既有约定不符；internal-logic=方案自身逻辑矛盾或前提不成立；missing-coverage=遗漏了必须处理的情形；unfalsifiable=验收判据无法证伪或缺失；scope=范围问题（过大/过小/越界）"
+          },
+          "title": {"type": "string", "description": "一句话概括问题"},
+          "why": {"type": "string", "description": "为什么这是问题：会导致什么后果。不要复述方案原文。"},
+          "evidence": {"type": "string", "description": "证据。仓库证据用 路径:行号 并附关键代码/文本片段；方案自身问题引用方案原文。无证据的条目不应出现在 findings。"},
+          "suggestion": {"type": "string", "description": "建议的修订方向。给方向和判据，不要代写方案。"},
+          "is_new": {"type": "boolean", "description": "本轮新发现=true；上一轮提过但仍未解决=false"},
+          "relates_to": {"type": "string", "description": "若 is_new=false，填上一轮对应的 finding id；否则填空字符串"}
+        }
+      }
+    },
+    "unverifiable": {
+      "type": "array",
+      "description": "你无法核实的假设、看不到的上下文、以及基于猜测而未写进 findings 的疑虑。诚实列出，这比多提几条无据的意见有价值得多。",
+      "items": {"type": "string"}
+    }
+  }
+}

@@ -13,6 +13,7 @@
 | `execute-plan` | [`execute-plan/SKILL.md`](execute-plan/SKILL.md) | 按层次化执行计划驱动开发：解析 milestone / slice / task 结构，在独立 worktree 中实现并验证每个 milestone，通过后再合并回主分支。 |
 | `fupeng-perspective` | [`fupeng-perspective/SKILL.md`](fupeng-perspective/SKILL.md) | 以经济学家付鹏（付鹏说 / 金融炼药师）的思维框架与表达方式分析宏观、资产价格与商业问题：基于 156 个公开来源提炼的 6 个心智模型、9 条决策启发式与完整表达 DNA，作为思维顾问给出交易员视角的分析。 |
 | `generate-mydocs` | [`generate-mydocs/SKILL.md`](generate-mydocs/SKILL.md) | 以源码为主要素材、以现有文档为参考，为项目生成渐进式学习文档（beginner / advanced / deep-dives）。 |
+| `kimi-plan-review` | [`kimi-plan-review/SKILL.md`](kimi-plan-review/SKILL.md) | 用独立 kimi 进程对方案做对抗式评审（只读 reviewer agent 核实仓库、逐条裁决、最多 3 轮）。**允许 agent 自行触发**：写多步方案/退出 plan mode 前主动调用，无需用户点名。 |
 | `review-design-proposal` | [`review-design-proposal/SKILL.md`](review-design-proposal/SKILL.md) | 从需求覆盖、架构可行性、风险与失败模式、一致性与可执行性等视角评审设计方案，并直接修订设计文档。 |
 
 ## 使用方式
