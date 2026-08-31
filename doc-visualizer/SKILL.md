@@ -259,9 +259,9 @@ graph LR
 
 ---
 
-## ⚠️ Mermaid 渲染四大坑与根治方案（实战血泪）
+## ⚠️ Mermaid 渲染六大坑与根治方案（实战血泪）
 
-这些都是真实踩过的坑，按严重程度排列。**结论先行：图在标签页/折叠容器里时，直接用"预渲染静态 SVG"方案，以下四个坑一次性全部绕开。**
+这些都是真实踩过的坑，按严重程度排列。**结论先行：图在标签页/折叠容器里时，直接用"预渲染静态 SVG"方案，以下前四个坑一次性全部绕开（坑 5/坑 6 是静态 SVG 落地后的显示与维护问题，同样要按方案处理）。**
 
 ### 坑 1：`stateDiagram-v2` 的过渡标签不支持 `<br/>`
 
@@ -337,6 +337,8 @@ E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
      const page = await browser.newPage();
      await page.goto('about:blank', { waitUntil:'domcontentloaded' });
      await page.addScriptTag({ path: MERMAID_JS });
+     // 行高与宿主页（Tailwind preflight 1.5）对齐，防止标签框高按紧凑行高测量导致嵌页后裁切（见坑 5）
+     await page.evaluate(() => { const s = document.createElement('style'); s.textContent = 'div{line-height:1.5}'; document.head.appendChild(s); });
      await page.evaluate(() => mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose' }));
      const html = fs.readFileSync('你的.html','utf8');
      const blocks = [...html.matchAll(/<pre class="mermaid">\n?([\s\S]*?)<\/pre>/g)].map(m=>m[1].trim());
@@ -355,10 +357,46 @@ E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
    - `<pre class="mermaid">…</pre>` → `<div class="mmd-svg">…svg…</div>`（**类名避开 `mermaid`**，外部工具抓不到）；
    - 删除 mermaid CDN `<script>` 与 `mermaid.initialize`；
    - 删除 Alpine 懒渲染逻辑（`renderMermaid` 等），标签切换只改 `tab`；
-   - CSS：`.mmd-svg{overflow-x:auto}.mmd-svg svg{max-width:100%;height:auto}`。
+   - 根 svg 标签剥掉内联 `style="max-width:…"` / `width` / `height`，按 viewBox 宽度设显式 `width` 属性（见坑 6）；
+   - CSS：`.mmd-svg{overflow-x:auto} .mmd-svg svg{max-width:none;height:auto} .mmd-svg foreignObject div{line-height:1.5}`（自然尺寸 + 横向滚动 + 行高锁定，见坑 5/坑 6）。
 3. 附带收益：离线可用、无版本冲突、任何工具都不会再碰这些图。
 
 > 判断用哪个方案：**只在本机浏览器/无外部工具的预览环境** → 运行时 mermaid + 懒渲染 + 锁版本即可；**可能被其他工具打开/离线/公司内网** → 直接静态 SVG，一劳永逸。
+
+### 坑 5：宿主页 CSS 膨胀 SVG 内的 foreignObject 标签 → 多行文字被框底裁切（静态 SVG 也中招，最容易被漏检）
+
+mermaid flowchart-v2 的节点标签是 `foreignObject` 里的 HTML div。`mermaidAPI.render` 按**当前渲染环境**的行高测量标签框高；干净渲染环境里生成的 SVG，内嵌进带 Tailwind 的宿主页后，preflight 的 `line-height:1.5` 会继承进标签 div——文字实际变高、超出按紧凑行高算出的框高，**多行节点的最后一行被框底裁掉**。生成时的截图（无 Tailwind）查不出来，缩放后的整页截图也容易看漏，用户拿到手才报"框太小、内容显示不全"。
+
+**根治（生成时 + 宿主页两边锁定同一行高）：**
+
+1. 生成 SVG 前，在渲染页注入与宿主一致的行高，让 mermaid 按真实行高测量框高（必须在 `mermaid.initialize` / `render` **之前**）：
+   ```js
+   await page.evaluate(() => {
+     const s = document.createElement('style');
+     s.textContent = 'div{line-height:1.5}';   // 与宿主页 Tailwind preflight 对齐
+     document.head.appendChild(s);
+   });
+   ```
+2. 宿主页 CSS 锁定图内标签行高，防止宿主继承值再变化：
+   ```css
+   .mmd-svg foreignObject div{line-height:1.5}
+   ```
+3. 验证必须在**真实宿主页**（Tailwind 已加载）逐节点实测裁切，任一不满足即有裁切：
+   ```js
+   [...document.querySelectorAll('.mmd-svg g.node')].filter(n => {
+     const fo = n.querySelector('foreignObject'); const d = fo?.querySelector('div');
+     return d && d.getBoundingClientRect().height > parseFloat(fo.getAttribute('height')) + 0.5;
+   })
+   ```
+
+### 坑 6：宽图被 `max-width:100%` 整体压小 + 二次替换的正则陷阱
+
+mermaid 根节点自带 `width="100%"` + **内联** `style="max-width:XXXpx"`，配合 `.mmd-svg svg{max-width:100%}` 会把 2000+px 宽的图整体压进 ~1100px 卡片（约 45% 缩放），16px 文字缩到 7px。内联 style 优先级高于样式表——CSS 里写 `max-width:none` 会被它压住，**必须在脚本化替换时处理根标签**：
+
+1. 剥掉根 svg 的内联 `style`/`width`/`height` 属性，按 viewBox 宽度设显式 `width` 属性；
+2. CSS 用 `.mmd-svg svg{max-width:none;height:auto}`——`.mmd-svg` 已有 `overflow-x:auto`，宽图按自然尺寸横向滚动、文字保持原始大小；窄图不受影响；
+3. 图源层面优先把自然宽度压到 ≈ 卡片宽度以内，避免用户横向滚动：节点标签长字段列表用 `<br/>` 折行；并列的无关节点用不可见边 `A ~~~ B` 改纵向堆叠（mermaid 9.4+ 支持）；
+4. **二次维护（替换已内联的 SVG）时，块匹配用 `(<div class="mmd-svg">).*?(</svg>)`，结尾锚在 `</svg>` 上**——flowchart-v2 标签里的 `foreignObject` 含 `</div>`，非贪婪匹配到第一个 `</div>` 会把旧图拦腰截断，残骸散落在页面里变成裸文本，且 div 配对数被破坏。
 
 ---
 
@@ -396,6 +434,9 @@ E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
 - [ ] `stateDiagram-v2` 的过渡标签无 `<br/>`
 - [ ] 标签页/折叠容器里的图：要么静态 SVG，要么 `startOnLoad:false` + 切标签懒渲染
 - [ ] 若用静态 SVG：`<div>` 类名不含 `mermaid`，页面无任何运行时 mermaid 引用
+- [ ] 静态 SVG 生成时已注入与宿主一致的行高（`div{line-height:1.5}`，见坑 5），页面已加 `.mmd-svg foreignObject div{line-height:1.5}`
+- [ ] 根 svg 无内联 `style`/`width`/`height`，已按 viewBox 设显式 `width`；CSS 为 `max-width:none`（自然尺寸 + 横向滚动，见坑 6）
+- [ ] 图自然宽度尽量 ≤ 卡片宽度（节点文本折行、不可见边纵向堆叠），宽图保证横向滚动可用
 - [ ] 标签页的 `x-show` 对应 `tab==='xxx'` 字符串精确匹配
 - [ ] 文档中的 `<` `>` `&` 在 HTML 文本节点中已转义为 `&lt;` `&gt;` `&amp;`
 - [ ] 移动端友好（使用 `sm:` `md:` 响应式前缀或 `overflow-x-auto`）
@@ -414,7 +455,16 @@ E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
   [...document.querySelectorAll('.mmd-svg svg')].filter(s=>s.getBoundingClientRect().width>0)
   // NaN 检查：/translate\(undefined,\s*NaN\)/.test(svg.innerHTML)
   ```
+- **标签裁切必须在真实宿主页实测**（干净渲染环境与 jsdom 都查不出，见坑 5）：Tailwind 加载后逐节点比对 foreignObject 高度与标签实际高度，结果应为 0：
+  ```js
+  [...document.querySelectorAll('.mmd-svg g.node')].filter(n => {
+    const fo = n.querySelector('foreignObject'); const d = fo?.querySelector('div');
+    return d && d.getBoundingClientRect().height > parseFloat(fo.getAttribute('height')) + 0.5;
+  }).length
+  ```
+- 展开折叠卡片用 `Alpine.$data(card).open = true`（幂等），**不要循环 `button.click()`**——验证脚本每个标签页点一遍展开按钮，会把前一个标签页已展开的卡片再点回收起，轮到目标标签页时恰好全是收起状态，截图误判"展开失败"。
 - 控制台必须 0 错误（监听 `console` 与 `pageerror` 事件）。
+- 最后**按自然分辨率裁剪放大**多行节点（含高亮/最长标签的节点）目检：文字完整、不贴框、无宿主页 CSS 污染。
 
 ---
 
@@ -435,9 +485,10 @@ E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
   <style>
     [x-cloak]{display:none!important}
     .tab-content{display:none}
-    /* 静态 SVG 图：横向可滚动、等比缩放 */
+    /* 静态 SVG：自然尺寸 + 卡片内横向滚动（不整图压小），行高锁定防标签裁切 */
     .mmd-svg{overflow-x:auto}
-    .mmd-svg svg{max-width:100%;height:auto}
+    .mmd-svg svg{max-width:none;height:auto}
+    .mmd-svg foreignObject div{line-height:1.5}
   </style>
 </head>
 <body class="bg-gray-50 text-gray-900 min-h-screen">
