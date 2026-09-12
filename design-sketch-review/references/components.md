@@ -29,11 +29,24 @@
     </svg>
   </button>
   <div x-show="open" x-collapse class="p-4 space-y-2 bg-slate-50">
-    <!-- 切片列表 -->
+    <!-- 切片列表：每个 slice 一个子块，块内列出 task（含末尾的"验收"task） -->
+    <div class="bg-white border border-gray-200 rounded-lg p-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">M1.S1</span>
+        <span class="font-medium text-sm">切片标题</span>
+        <span class="ml-auto text-xs text-gray-400">依赖：无</span>
+      </div>
+      <ul class="mt-2 text-sm text-gray-600 space-y-1 list-disc list-inside">
+        <li>T1 任务一句话</li>
+        <li>T2 任务一句话</li>
+        <li class="text-emerald-700">验收：可判定的完成标准（本切片的 DoD）</li>
+      </ul>
+    </div>
   </div>
 </div>
 ```
 > 注：`x-collapse` 需要 Alpine.js Collapse 插件。若不可用，改用 `x-show="open"` 加 `class="transition-all"`。
+> 草图的里程碑卡必须展开到 slice / task 两级——这与定稿 md 第 4 节"任务分解"（milestone → slice → task）同源，评审拍板的就是这个粒度。
 
 ## 红线警告卡
 
