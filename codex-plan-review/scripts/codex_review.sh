@@ -32,7 +32,7 @@ usage() {
   --mode repo|text     repo=给 codex 只读仓库权限（默认，能核对方案与代码是否对得上）
                        text=只喂方案正文，不给仓库访问（快，但抓不到 repo-mismatch）
   --repo <dir>         仓库根，默认由方案路径向上找 git 根
-  --out <dir>          产物目录，默认 <方案目录>/review/<方案文件名去后缀>/
+  --out <dir>          产物目录，默认 <方案目录>/reviews/<方案文件名去后缀>/
   --focus "<文本>"      追加的关注点，例如"重点看数据口径"
   --context <path>     额外让 codex 先读的文件，可重复。默认自动带上仓库的 AGENTS.md/CLAUDE.md
   --effort <level>     codex 推理强度 low|medium|high|xhigh，默认 xhigh
@@ -135,7 +135,7 @@ if [[ -z "$REPO" ]]; then
 fi
 [[ -d "$REPO" ]] || die "仓库目录不存在: $REPO"
 
-[[ -n "$OUT" ]] || OUT="$PLAN_DIR/review/$PLAN_STEM"
+[[ -n "$OUT" ]] || OUT="$PLAN_DIR/reviews/$PLAN_STEM"
 mkdir -p "$OUT" || die "无法创建产物目录: $OUT"
 
 if (( ROUND >= 2 )); then

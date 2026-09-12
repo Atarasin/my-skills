@@ -77,7 +77,7 @@ scripts/codex_review.sh \
 
 - `--mode repo`（默认）给 codex 只读仓库权限，它会去核对方案与代码。**抓 repo-mismatch 全靠这个**，不要随便降级。
 - `--mode text` 只喂方案正文。仅在方案完全不涉及本仓库代码时用（纯策略讨论、纯文档结构）。快，但抓不到"这个函数不存在"。
-- 产物落在 `<方案目录>/review/<方案名>/`。每次尝试有独立日志 `round<N>-codex.attempt<K>.log`（重试不覆盖），`round<N>-codex.log` 指向最近一次。
+- 产物落在 `<方案目录>/reviews/<方案名>/`。每次尝试有独立日志 `round<N>-codex.attempt<K>.log`（重试不覆盖），`round<N>-codex.log` 指向最近一次。
 - 脚本内置瞬时故障韧性：命中限流/容量/5xx 特征时自动退避重试（默认 2 次追加尝试，45s/90s 退避），最后一次尝试自动降级（给了 `--fallback-model` 就换模型，否则降一档 effort）。重试耗尽退出码 **4**——这是"该走降级路径"的信号，不是让你原样再跑一遍。
 
 **这一步要放后台跑**，并告诉用户在等。实测耗时：读仓库的真实方案 **10-20 分钟**（`xhigh` 强度，方案越具体它读的代码越多，慢是在干活——实测它会为了确认一个前提去跑只读探针）；`--mode text` 约 1 分钟。若走第三方免费 provider，高峰时段可能被 "at capacity" 限流拖长甚至失败（脚本会自己重试）。按 3 轮上限估最坏情况一小时，所以「该不该跑」的判断要在开跑前做完。
@@ -130,7 +130,7 @@ scripts/codex_review.sh \
 
 对待外部意见的态度细节，`superpowers:receiving-code-review` 讲得更全（不要附和式认同、有理由就推回去）。这里的差别只是评审对象是方案而不是代码。
 
-把核实与处置写成 `<方案目录>/review/<方案名>/round<N>-disposition.md`。格式见 `references/artifacts.md`。这个文件有两个用途：喂给下一轮 codex（让它知道哪些已解决、哪些被驳回及为什么），以及作为最终留痕。
+把核实与处置写成 `<方案目录>/reviews/<方案名>/round<N>-disposition.md`。格式见 `references/artifacts.md`。这个文件有两个用途：喂给下一轮 codex（让它知道哪些已解决、哪些被驳回及为什么），以及作为最终留痕。
 
 ### 第 4 步：修订方案，判断是否继续
 
@@ -156,12 +156,12 @@ scripts/codex_review.sh \
 
 ## 留痕与交付
 
-评审产物留在 `<方案目录>/review/<方案名>/`：`round<N>-prompt.md`、`round<N>-review.json`、`round<N>-disposition.md`。
+评审产物留在 `<方案目录>/reviews/<方案名>/`：`round<N>-prompt.md`、`round<N>-review.json`、`round<N>-disposition.md`。
 
 方案正文里**只加一行指针**，保持正文干净：
 
 ```markdown
-> 本方案经 codex 外部评审 N 轮（YYYY-MM-DD），评审记录见 `review/<方案名>/`。
+> 本方案经 codex 外部评审 N 轮（YYYY-MM-DD），评审记录见 `reviews/<方案名>/`。
 ```
 
 如果某轮评审改变了方案的**形态**（不只是补漏，而是换了做法、砍了范围、加了前置依赖），在指针下面再补 2-3 行说明改了什么、为什么——半年后回看方案时，"为什么不是当初那个更简单的做法"是最值钱的信息。

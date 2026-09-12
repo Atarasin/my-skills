@@ -69,7 +69,7 @@ scripts/kimi_review.sh \
 
 - `--mode repo`（默认）让 kimi 用只读工具（Read/Grep/Glob）核对方案与代码。**抓 repo-mismatch 全靠这个**，不要随便降级。
 - `--mode text` 只喂方案正文。仅在方案完全不涉及本仓库代码时用（纯策略讨论、纯文档结构）。快，但抓不到"这个函数不存在"。
-- 产物落在 `<方案目录>/review/<方案名>/`。每次尝试有独立日志 `round<N>-kimi.attempt<K>.jsonl`（重试不覆盖），`round<N>-kimi.log` 指向最近一次。
+- 产物落在 `<方案目录>/reviews/<方案名>/`。每次尝试有独立日志 `round<N>-kimi.attempt<K>.jsonl`（重试不覆盖），`round<N>-kimi.log` 指向最近一次。
 - 脚本内置瞬时故障韧性：命中限流/容量/5xx/连接抖动特征时自动退避重试（默认 2 次追加尝试，45s/90s 退避），给了 `--fallback-model` 时最后一次尝试换模型。重试耗尽退出码 **4**——这是"该走降级路径"的信号，不是让你原样再跑一遍。
 
 **这一步要放后台跑**，并告诉用户在等。耗时取决于模型与方案具体程度（它读的代码越多越久，慢是在干活）；按 3 轮上限估最坏情况，所以「该不该跑」的判断要在开跑前做完。
@@ -120,7 +120,7 @@ scripts/kimi_review.sh \
 - **它自述的 `unverifiable` 条目值得你自己去查。** 那些是它想查而查不到的，往往指向真问题——只是它没有证据所以（正确地）没报成 finding。
 - **P2 建议默认不采纳。** 除非顺手且确实改进。评审的价值在 P0/P1，被 P2 拖着改方案是常见的注意力浪费。
 
-把核实与处置写成 `<方案目录>/review/<方案名>/round<N>-disposition.md`。格式见 `references/artifacts.md`。这个文件有两个用途：喂给下一轮 kimi（让它知道哪些已解决、哪些被驳回及为什么），以及作为最终留痕。
+把核实与处置写成 `<方案目录>/reviews/<方案名>/round<N>-disposition.md`。格式见 `references/artifacts.md`。这个文件有两个用途：喂给下一轮 kimi（让它知道哪些已解决、哪些被驳回及为什么），以及作为最终留痕。
 
 ### 第 4 步：修订方案，判断是否继续
 
@@ -146,12 +146,12 @@ scripts/kimi_review.sh \
 
 ## 留痕与交付
 
-评审产物留在 `<方案目录>/review/<方案名>/`：`round<N>-prompt.md`、`round<N>-review.json`、`round<N>-disposition.md`。
+评审产物留在 `<方案目录>/reviews/<方案名>/`：`round<N>-prompt.md`、`round<N>-review.json`、`round<N>-disposition.md`。
 
 方案正文里**只加一行指针**，保持正文干净：
 
 ```markdown
-> 本方案经 kimi 外部评审 N 轮（YYYY-MM-DD），评审记录见 `review/<方案名>/`。
+> 本方案经 kimi 外部评审 N 轮（YYYY-MM-DD），评审记录见 `reviews/<方案名>/`。
 ```
 
 如果某轮评审改变了方案的**形态**（不只是补漏，而是换了做法、砍了范围、加了前置依赖），在指针下面再补 2-3 行说明改了什么、为什么——半年后回看方案时，"为什么不是当初那个更简单的做法"是最值钱的信息。
