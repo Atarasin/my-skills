@@ -17,7 +17,7 @@
         └── ...
 ```
 
-`round<N>-disposition.md` 是你写的，其余由 `scripts/kimi_review.sh` 落盘。
+`round<N>-disposition.md` 是你写的，其余由评审脚本落盘（`scripts/kimi_review.sh`；Windows 下用 `scripts/kimi_review.ps1`，产物相同）。
 
 ## disposition 文件格式
 
