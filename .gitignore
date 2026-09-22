@@ -1,3 +1,5 @@
 # link-skills.ps1 的本机配置与替换备份
 .skill-link.json
 .skill-link-backup/
+
+.workbuddy/
