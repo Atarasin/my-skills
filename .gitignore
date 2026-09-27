@@ -3,3 +3,7 @@
 .skill-link-backup/
 
 .workbuddy/
+
+# 技能脚本运行产物（如 doc-visualizer/assets/harness/build.py 的编译缓存）
+__pycache__/
+*.pyc

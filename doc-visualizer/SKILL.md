@@ -8,533 +8,98 @@ description: >
   都应主动提议或直接调用本技能。
   Activate for: "visualize", "make interactive", "dashboard for this doc",
   "explain this plan visually", "turn into interactive", "帮我理解", "可视化", "做个仪表板".
+agent_created: true
 ---
 
-## 产出物
+# Doc Visualizer
 
-一个完全自包含的 HTML 文件：
-- 无需服务器，浏览器直接打开
-- 所有库走 CDN，数据内嵌
-- 支持点击展开、标签切换、悬停提示等交互
-- 中文字符正确渲染（UTF-8）
+把多章节技术文档（设计方案、判决报告、研究提案、规范）转成**单文件交互式 HTML 仪表板**：无需服务器、浏览器直接打开、支持标签切换与折叠展开、中文正确渲染。
 
----
+**产出物**：一个 HTML 文件。交付形态有两种，先看目标项目既有约定再决定（见核心原则 5）。
 
-## ⭐ 最高优先级：用普通话改写，不要抄原文
+## 核心原则（每次都适用）
 
-这是本 skill 最重要的原则。原文是写给领域专家的，充斥着行话缩写；**你的任务是翻译给初次接触这个方向的人看**。
+1. ★ **用普通话改写，不要抄原文。** 原文写给领域专家，任务是把内容翻译给初次接触的人看。逐条问自己"一个聪明但不了解这个项目的人读完能明白吗"。→ `references/rewriting.md`
+2. ★ **图文两层，缺一不可。** 每条结论都要有"改写后的人话"与"可展开的原文摘录"——前者给理解，后者给核对，不能互相替代。
+3. ★ **方向性表述必须回原文逐字核对。** "正/负、改善/恶化、超过/低于"是判决类文档最容易被写反的部分，**写反比不写更糟**。
+4. ★ **源文档内部不一致时：标注，不要擅改。** 同一数字在两处不一致，按各自章节原样呈现 + 一行小字说明差异与量级，不要自己挑一个采信。
+5. ★ **交付形态跟随项目既有约定。** 打开目标项目 `.doc-visualizer-output/` 看既有产物：内联的就做内联，CDN 的就用 CDN。默认推荐**离线自包含单文件**（Tailwind + Alpine 编译内联，断网可开）。
+6. ★ **图优先手写内联 SVG**，而不是 mermaid：坐标可控、零运行时依赖，能一次性绕开全部 mermaid 渲染坑。
+7. ★ **主题跟随当前 IDE**：浅色主题下所有面板/卡片/图表一律浅底深字，不要凭习惯写死深色 Hero。
+8. **配色按语义走**：分析/判决类内容用 `emerald`=通过、`red`=失败；**不要套股市红绿**，同一文件里不混用两套。
 
-### 改写原则
+## 工作流
 
-**每一条内容都要问自己**：*"一个聪明但不了解这个项目的人，读完能明白这在说什么吗？"*
-如果不能，就改写。不要因为"忠于原文"而保留读者看不懂的内容。
+### 第一步 · 读文档、抽结构
 
-**三种处理方式**（按优先级）：
+识别里程碑、红线、假设、分层、依赖、陷阱、决策与数据表，记下标题/摘要/日期/核心数字（这些直接进 Hero 区）。映射表见 `references/page-design.md`。
 
-1. **直接替换**：能用大白话说清楚的，直接改写，删掉原始术语
-   > ❌ `vol正向预测收益、守卫/择时/regime降仓/vol-targeting四者同因失败`
-   > ✅ `过去试过四种减少亏损的方法：自动止损、择时操作、仓位控制、波动率调仓——测试下来全部在同一个地方失败：市场最低迷时把股票卖掉了`
+### 第二步 · 设计页面结构
 
-2. **注释保留**：专业术语不可避免时，在括号内补充一句大白话解释
-   > ❌ `ETL建成后M1附带行动项验证`
-   > ✅ `数据管道（ETL）搭好后，顺手验证这个猜想`
+按内容决定标签，**没有对应内容的标签不生成**。常见 6 类：概览 / 路线图 / 约束与决策 / 假设追踪 / 实现指南 / 数据事实。**配对文档（prereg + 判决书、设计 + 结项）**有专用结构，见 `references/page-design.md`。
 
-3. **术语悬浮提示**：必须保留的专业词汇，用 tooltip 包裹，鼠标悬停显示解释
-   ```html
-   <span class="tooltip-term" title="从多个原始 CSV 文件读取、清洗、统一格式后写入 parquet">ETL</span>
-   ```
-   在 `<style>` 中添加：
-   ```css
-   .tooltip-term {
-     border-bottom: 1px dashed #94a3b8;
-     cursor: help;
-     color: #475569;
-   }
-   ```
+### 第三步 · 写 HTML
 
-### 常见行话翻译参考
+写作期按 CDN 写、随手加 utility 类，**交付前一步再内联**。技术栈、颜色语义、组件模式（可展开卡/红线卡/假设卡/层叠图/标签页）与完整骨架见 `references/html-authoring.md`。
 
-| 原文术语 | 改写建议 |
+图一律手写内联 SVG。**画任何图之前先读 `references/svg-authoring.md`** —— 里面四条布局约束（越界、旋转纵轴标题、文本重叠、折线选择器）都是会导致返工的实测坑。
+
+### 第四步 · 内联成单文件
+
+编译 Tailwind → 源文件留占位注释 → 构建脚本替换并断言 → 落进可复用目录。**长页面必须分段写**（单次写入约 25k token 会被截断）。见 `references/build-and-verify.md`。
+
+### 第五步 · 验证后再交付
+
+**目检不算验证。** 跑 puppeteer 断言（Alpine 启动 / 面板切换 / SVG **越界 + 文本重叠** / 自然尺寸 / 无横向溢出 / 控制台 0 错误），再做 2× 定向裁剪目检（每张图 + 每处窄列区域）。见 `references/build-and-verify.md`。
+
+### 第六步 · 输出
+
+- 写入**当前工作目录**下的 `.doc-visualizer-output/<文档日期>_<主题简称>.html`
+- 源文件放 `tmp/<name>/`，构建脚本直接写产物；**改文案只改源、重跑构建**
+- 用 `present_files` 交付（本地 HTML 会自动打开内置预览面板并列出产物卡片），同时告知用户**绝对路径**
+
+## 参考索引
+
+| 文件 | 何时读 |
 |---|---|
-| ETL / parquet | 数据处理管道 / 列式存储文件 |
-| regime | 市场状态（牛市/熊市/震荡等） |
-| vol / volatility | 价格波动幅度 |
-| lag=N 交易日 | 数据延迟 N 个交易日才能用 |
-| generation | 一次完整的数据构建结果 |
-| fingerprint / 指纹 | 文件哈希校验值（用于检测数据是否被篡改） |
-| sentinel / 哨兵 | 自动检测异常的守卫程序 |
-| GC 保护 | 防止被自动清理 |
-| 前视 / look-ahead | 回测时不小心用到了未来的数据（作弊） |
-| 幸存者偏差 | 已退市的失败股票不在数据里，导致结论过于乐观 |
-| prereg | 预注册（先写下判断标准，再去看数据，防止事后挑指标） |
+| `references/rewriting.md` | 开始改写任何原文之前（行话对照表、两层模式、方向性核对） |
+| `references/page-design.md` | 抽结构、定标签、处理配对文档 |
+| `references/html-authoring.md` | 写 HTML（组件模式、颜色语义、完整骨架） |
+| `references/svg-authoring.md` | **画任何图之前必读**（四类会导致返工的布局坑 + 坐标套路） |
+| `references/mermaid-pitfalls.md` | **仅当确实要用 mermaid 时**读；用了手写 SVG 就不必看 |
+| `references/build-and-verify.md` | 内联构建与渲染验证（含可直接复制的断言代码） |
+| `assets/harness/` | **直接复制使用**，不要每版重写：`build.py`（内联+断言）、`verify.js`（全套渲染断言，标签自动发现）、`crop.js`（2× 定向裁剪）、`input.css`、`tailwind.config.js` |
 
-### 两层内容模式
+## 交付前检查清单
 
-每张卡片/条目用"摘要 + 可选技术详情"的两层结构：
+**形态与主题**
+- [ ] 已看过项目 `.doc-visualizer-output/` 既有产物，形态跟随既有约定
+- [ ] 若内联：产物里 `grep -c "cdn.tailwindcss\|cdn.jsdelivr\|mermaid"` 结果为 **0**
+- [ ] 若内联：产物大小合理（**20KB 左右 = 内联没生效**；100KB+ 正常，190KB+ 也可能只是正文长，判据是有无 CDN 残留而非字节数）
+- [ ] 配色跟随 IDE 主题；浅色主题下无深色大色块
+- [ ] 文档中的 `<` `>` `&` 在文本节点已转义为 `&lt;` `&gt;` `&amp;`
 
-```html
-<!-- 先说人话，再说技术细节 -->
-<div class="border rounded-xl p-4">
-  <p class="font-semibold">一句话说清楚这是什么</p>
-  <p class="text-sm text-gray-600 mt-1">用普通话解释为什么重要、会发生什么</p>
-  <details class="mt-3">
-    <summary class="text-xs text-gray-400 cursor-pointer hover:text-gray-600">原始技术细节 ▾</summary>
-    <p class="text-xs text-gray-500 mt-1"><!-- 原文摘录或更详细的技术说明 --></p>
-  </details>
-</div>
-```
+**内容**
+- [ ] 每条结论都有"人话"层 + `<details>` 原文层
+- [ ] 方向性表述（增/减、改善/恶化）已逐字回原文核对
+- [ ] 源文档内部的口径冲突已在页面显式标注，未擅自择一
 
----
-
-## 第一步：结构分析
-
-读取文档后，识别以下结构元素并记录数量与内容：
-
-| 元素类型 | 识别特征 | → 可视化形式 |
-|---|---|---|
-| 里程碑/阶段 | M0~Mn、Phase N、阶段 | 带可展开任务的路线图卡片 |
-| 嵌套任务树 | Mx-Sy-Tz、子任务列表 | 可折叠树（三级） |
-| 硬性约束/红线 | 红线、禁止、MUST NOT、冻结条款 | 红色警告卡 + 图标 |
-| 假设/实验 | H1~Hn、待验证假设 | 状态徽章卡片 |
-| 架构分层 | 四层、Layer、数据层/指标层/… | 层叠堆栈图 |
-| 依赖关系 | blocks/blockedBy、前置条件 | Mermaid 流程图 |
-| 数据事实表 | markdown 表格、事实摘要 | 可排序交互表 |
-| 实现陷阱 | 雷区、Rn、注意点 | 折叠警告列表 |
-| 关键决策 | 冻结口径、已确认设计 | 决策卡片网格 |
-
-提取元数据：文档标题、一句话摘要、日期、核心数字（几个里程碑、几条红线…）。
-
----
-
-## 第二步：页面结构设计
-
-按内容决定标签数量，没有对应内容的标签不生成：
-
-1. **概览 (Overview)**：标题卡、关键统计数字、架构层叠图、里程碑依赖关系图（Mermaid）
-2. **路线图 (Roadmap)**：M0→Mn 可展开卡片 → 展开见切片 → 展开见任务
-3. **约束与决策 (Rules)**：红线警告卡（全部展示，不折叠）、冻结决策列表
-4. **假设追踪 (Hypotheses)**：Hn 卡片网格，含期望结论和触发条件
-5. **实现指南 (Guide)**：雷区列表、关键锚点表、技术注意事项
-6. **数据事实 (Data)**：文档中的数据表格、画像数字等
-
----
-
-## 第三步：生成 HTML
-
-### 技术栈（全 CDN，零安装）
-
-```html
-<script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.8/dist/mermaid.min.js"></script>
-```
-
-> ⚠️ **mermaid 必须锁定精确版本**（如 `@10.9.8`），不要用 `@10` 这种不锁版本的写法——不同工具注入的 mermaid 版本不同，行为差异极大（见下文"渲染坑"）。
->
-> ⚠️ **如果图放在标签页 / 折叠容器里，推荐直接采用"预渲染静态 SVG"方案**（见下文"渲染坑与根治"），彻底移除运行时 mermaid 依赖，任何环境都不会再报错。
-
-### 颜色语义系统
-
-| 用途 | Tailwind 类 |
-|---|---|
-| 红线 / 阻断 / 禁止 | `border-red-500 bg-red-50 text-red-800` |
-| 警告 / 待处理 | `border-amber-500 bg-amber-50 text-amber-800` |
-| 通过 / 已确认 | `border-emerald-500 bg-emerald-50 text-emerald-800` |
-| 架构 / 数据 | `border-blue-500 bg-blue-50 text-blue-800` |
-| 策略 / 决策 | `border-purple-500 bg-purple-50 text-purple-800` |
-| 里程碑主色 | `bg-slate-800 text-white` |
-
-### 核心组件模式
-
-**里程碑可展开卡片**
-```html
-<div x-data="{open:false}" class="border rounded-xl overflow-hidden">
-  <button @click="open=!open"
-    class="w-full flex items-center gap-3 p-4 bg-slate-800 text-white hover:bg-slate-700">
-    <span class="font-mono bg-white/20 px-2 py-0.5 rounded text-sm">M1</span>
-    <span class="font-semibold">统一 ETL</span>
-    <span class="ml-auto text-xs opacity-70">5 切片 · 22 任务</span>
-    <svg class="w-4 h-4 transition-transform" :class="open&&'rotate-180'"
-      fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-    </svg>
-  </button>
-  <div x-show="open" x-collapse class="p-4 space-y-2 bg-slate-50">
-    <!-- 切片列表 -->
-  </div>
-</div>
-```
-> 注：`x-collapse` 需要 Alpine.js Collapse 插件。若不可用，改用 `x-show="open"` 加 `class="transition-all"`。
-
-**红线警告卡**
-```html
-<div class="border-l-4 border-red-500 bg-red-50 rounded-r-lg p-4">
-  <div class="flex items-start gap-3">
-    <span class="text-red-500 text-xl mt-0.5">🚫</span>
-    <div>
-      <p class="font-semibold text-red-800">红线 1：不产生降仓规则</p>
-      <p class="mt-1 text-sm text-red-700">vol 正向预测收益，守卫/择时/regime 降仓四者同因失败已定论。</p>
-    </div>
-  </div>
-</div>
-```
-
-**假设状态卡**
-```html
-<div class="border rounded-xl p-4 hover:shadow-md transition-shadow">
-  <div class="flex items-center justify-between mb-2">
-    <span class="font-mono font-bold text-lg">H1</span>
-    <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">待验证</span>
-  </div>
-  <p class="font-medium text-sm mb-1">镜重圆回撤归因</p>
-  <p class="text-xs text-gray-600">事件前窗暴露分位中位数 ≥P80 且 KS p&lt;0.05 → 成立</p>
-  <div class="mt-2 pt-2 border-t text-xs text-gray-500">预期结论：M3 实跑后判决</div>
-</div>
-```
-
-**架构层叠图**
-```html
-<div class="space-y-1 max-w-lg">
-  <div class="bg-purple-100 border-2 border-purple-300 rounded-lg p-3 text-center font-medium">
-    策略链路层 · concept_exposure / env_report / 审计钩子
-  </div>
-  <div class="bg-blue-100 border-2 border-blue-300 rounded-lg p-3 text-center font-medium mx-4">
-    观测层 · builder concept 阶段 / reporter / webui
-  </div>
-  <div class="bg-green-100 border-2 border-green-300 rounded-lg p-3 text-center font-medium mx-8">
-    指标层 · market panel / stock heat_rank_pct / lifecycle
-  </div>
-  <div class="bg-gray-100 border-2 border-gray-300 rounded-lg p-3 text-center font-medium mx-12">
-    数据层 · concept_etl / parquet / 三哨兵 / 指纹缓存
-  </div>
-  <div class="text-center text-xs text-gray-400 mt-1">↑ 每层只读下一层，禁止反向依赖</div>
-</div>
-```
-
-**Mermaid 依赖图**（说明：这是图的**源文本**；最终 HTML 里把它预渲染成静态 SVG 内嵌，见"渲染坑与根治"，不要保留 `<pre class="mermaid">`）
-```html
-<div class="overflow-x-auto">
-<pre class="mermaid">
-graph LR
-  M0[M0 前置实验\nP0+P1] --> M2
-  M1[M1 统一ETL] --> M2[M2 观测层]
-  M2 --> M3[M3 策略链路]
-  M3 --> M4[M4 审计仓管]
-  M5[M5 二期\n独立预注册]
-  style M0 fill:#fef3c7
-  style M5 fill:#f3f4f6,stroke-dasharray:5
-</pre>
-</div>
-```
-
-**雷区折叠列表**
-```html
-<div x-data="{open:false}">
-  <button @click="open=!open"
-    class="flex items-center gap-2 text-amber-800 font-semibold hover:text-amber-600">
-    <span>⚠️ R1 — OPTIONAL 门禁嵌在 leverage.enabled 下</span>
-    <span x-text="open?'▲':'▼'" class="text-xs"></span>
-  </button>
-  <div x-show="open" class="mt-2 text-sm text-gray-700 pl-6 border-l-2 border-amber-300">
-    <p><strong>位置：</strong> builder.py:198-207</p>
-    <p><strong>规避：</strong> concept 必须独立 config.concept.enabled 条件块</p>
-  </div>
-</div>
-```
-
-**标签页导航**
-```html
-<div x-data="{tab:'overview'}">
-  <!-- 标签按钮 -->
-  <div class="flex gap-1 border-b mb-6 overflow-x-auto">
-    <button @click="tab='overview'"
-      :class="tab==='overview'?'border-b-2 border-blue-600 text-blue-600':'text-gray-600'"
-      class="px-4 py-2 text-sm font-medium whitespace-nowrap">概览</button>
-    <!-- 其余标签... -->
-  </div>
-  <!-- 各标签内容 -->
-  <div x-show="tab==='overview'">...</div>
-</div>
-```
-
----
-
-## ⚠️ Mermaid 渲染六大坑与根治方案（实战血泪）
-
-这些都是真实踩过的坑，按严重程度排列。**结论先行：图在标签页/折叠容器里时，直接用"预渲染静态 SVG"方案，以下前四个坑一次性全部绕开（坑 5/坑 6 是静态 SVG 落地后的显示与维护问题，同样要按方案处理）。**
-
-### 坑 1：`stateDiagram-v2` 的过渡标签不支持 `<br/>`
-
-`flowchart` / `sequenceDiagram` 的文本里可以用 `<br/>` 换行，但 **`stateDiagram-v2` 不行**（mermaid 10.x 下直接报 `Syntax error in text`）。
-
-```mermaid
-stateDiagram-v2
-    IDLE --> PREPARING : 队列非空<br/>Prepare 投递      <!-- ❌ 报错 -->
-    IDLE --> PREPARING : 队列非空，Prepare 投递          <!-- ✅ 用逗号/顿号 -->
-```
-
-> 注：mermaid 11.x 解析更宽松，`<br/>` 能过 parse；但为了兼容 10.x，一律不用。
-
-### 坑 2：图文本里不能出现裸露的 `<` `>`（含转义实体）
-
-`pre` 里的 `&lt;` 会被浏览器解码成 `<`，mermaid 时序解析器把 `<` 当箭头语法起点 → `Syntax error in text`。**mermaid 文本里永远不要出现尖括号**：
-
-```
-E->>E: subCommandId = E&lt;seq&gt;L&lt;行&gt;D&lt;域&gt;   ❌ 浏览器解码后 < 触发箭头解析
-E->>E: subCommandId = E[seq]L[行]D[域]                 ✅ 用方括号
-```
-
-### 坑 3：`startOnLoad` 会渲染隐藏容器里的图 → `translate(undefined, NaN)`
-
-`startOnLoad:true` 在页面加载时同时渲染**所有**图。放在 `x-show` 标签页里（初始隐藏 → `display:none`）的图，容器尺寸为 0，布局全部算出 NaN，控制台刷屏 `Error: <g> attribute transform: Expected number, "translate(undefined, NaN)"`。
-
-运行时方案必须改懒渲染：`startOnLoad:false` + 切到哪个标签页才渲染哪个图：
-
-```html
-<main x-data="{
-  tab:'overview',
-  init(){ this.$nextTick(()=>this.renderMermaid()); },
-  setTab(t){ this.tab=t; this.$nextTick(()=>this.renderMermaid()); },
-  renderMermaid(){
-    const panel = this.$refs[this.tab+'Panel'];
-    if(!panel) return;
-    const pres = panel.querySelectorAll('pre.mermaid:not([data-mmd-rendered])');
-    if(!pres.length) return;
-    mermaid.run({ nodes:[...pres], suppressErrors:true }).then(()=>{
-      pres.forEach(p=>p.setAttribute('data-mmd-rendered','1'));
-    });
-  }
-}">
-  <!-- 每个标签内容 div 加 x-ref：<div x-show x-cloak x-ref="overviewPanel"> -->
-</main>
-```
-
-### 坑 4：外部工具会抓 `<pre class="mermaid">` 用自己的 mermaid 重渲染（最隐蔽）
-
-用户可能用带 mermaid 注入的工具打开页面（如 VS Code Markdown 预览的 `markdown-mermaid.js`，自带 mermaid 11.x）。它会：
-1. 抓走页面里所有 `<pre class="mermaid">`，用自己的版本渲染（版本与页面 CDN 不一致 → 行为冲突）；
-2. 与页面自带的 CDN mermaid 并存 → 双重渲染、连锁 NaN / 语法错误。
-
-**根治方案：预渲染静态 SVG，移除全部运行时 mermaid。**
-
-1. 生成 SVG（需真实浏览器，jsdom 无布局会失败）：
-   ```bash
-   mkdir -p /tmp/mmd-svg && cd /tmp/mmd-svg
-   npm init -y && npm install mermaid@10.9.8 puppeteer-core
-   # chrome-for-testing 从 npmmirror 镜像下载（googleapis 常被墙）：
-   curl -sL -o chrome.zip "https://cdn.npmmirror.com/binaries/chrome-for-testing/120.0.6099.0/linux64/chrome-linux64.zip"
-   unzip -q -o chrome.zip -d chrome && chmod -R +x chrome/chrome-linux64/
-   ```
-   ```js
-   // gen_svgs.js：读取 HTML 里的 <pre class="mermaid">，逐个渲染成 .svg 文件
-   const puppeteer = require('puppeteer-core');
-   const fs = require('fs');
-   const CHROME = '/tmp/mmd-svg/chrome/chrome-linux64/chrome';
-   const MERMAID_JS = '/tmp/mmd-svg/node_modules/mermaid/dist/mermaid.min.js';
-   const decode = s => s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
-   (async () => {
-     const browser = await puppeteer.launch({ executablePath: CHROME, args:['--no-sandbox'] });
-     const page = await browser.newPage();
-     await page.goto('about:blank', { waitUntil:'domcontentloaded' });
-     await page.addScriptTag({ path: MERMAID_JS });
-     // 行高与宿主页（Tailwind preflight 1.5）对齐，防止标签框高按紧凑行高测量导致嵌页后裁切（见坑 5）
-     await page.evaluate(() => { const s = document.createElement('style'); s.textContent = 'div{line-height:1.5}'; document.head.appendChild(s); });
-     await page.evaluate(() => mermaid.initialize({ startOnLoad:false, theme:'neutral', securityLevel:'loose' }));
-     const html = fs.readFileSync('你的.html','utf8');
-     const blocks = [...html.matchAll(/<pre class="mermaid">\n?([\s\S]*?)<\/pre>/g)].map(m=>m[1].trim());
-     for (let i=0;i<blocks.length;i++){
-       const text = decode(blocks[i]);
-       const svg = await page.evaluate(async t => {
-         const id = 'mmd' + Math.random().toString(36).slice(2);
-         return (await mermaid.mermaidAPI.render(id, t)).svg;
-       }, text);
-       fs.writeFileSync(`diagram_${i+1}.svg`, svg);
-     }
-     await browser.close();
-   })();
-   ```
-2. 替换 HTML（脚本化，SVG 体积大不要手贴）：
-   - `<pre class="mermaid">…</pre>` → `<div class="mmd-svg">…svg…</div>`（**类名避开 `mermaid`**，外部工具抓不到）；
-   - 删除 mermaid CDN `<script>` 与 `mermaid.initialize`；
-   - 删除 Alpine 懒渲染逻辑（`renderMermaid` 等），标签切换只改 `tab`；
-   - 根 svg 标签剥掉内联 `style="max-width:…"` / `width` / `height`，按 viewBox 宽度设显式 `width` 属性（见坑 6）；
-   - CSS：`.mmd-svg{overflow-x:auto} .mmd-svg svg{max-width:none;height:auto} .mmd-svg foreignObject div{line-height:1.5}`（自然尺寸 + 横向滚动 + 行高锁定，见坑 5/坑 6）。
-3. 附带收益：离线可用、无版本冲突、任何工具都不会再碰这些图。
-
-> 判断用哪个方案：**只在本机浏览器/无外部工具的预览环境** → 运行时 mermaid + 懒渲染 + 锁版本即可；**可能被其他工具打开/离线/公司内网** → 直接静态 SVG，一劳永逸。
-
-### 坑 5：宿主页 CSS 膨胀 SVG 内的 foreignObject 标签 → 多行文字被框底裁切（静态 SVG 也中招，最容易被漏检）
-
-mermaid flowchart-v2 的节点标签是 `foreignObject` 里的 HTML div。`mermaidAPI.render` 按**当前渲染环境**的行高测量标签框高；干净渲染环境里生成的 SVG，内嵌进带 Tailwind 的宿主页后，preflight 的 `line-height:1.5` 会继承进标签 div——文字实际变高、超出按紧凑行高算出的框高，**多行节点的最后一行被框底裁掉**。生成时的截图（无 Tailwind）查不出来，缩放后的整页截图也容易看漏，用户拿到手才报"框太小、内容显示不全"。
-
-**根治（生成时 + 宿主页两边锁定同一行高）：**
-
-1. 生成 SVG 前，在渲染页注入与宿主一致的行高，让 mermaid 按真实行高测量框高（必须在 `mermaid.initialize` / `render` **之前**）：
-   ```js
-   await page.evaluate(() => {
-     const s = document.createElement('style');
-     s.textContent = 'div{line-height:1.5}';   // 与宿主页 Tailwind preflight 对齐
-     document.head.appendChild(s);
-   });
-   ```
-2. 宿主页 CSS 锁定图内标签行高，防止宿主继承值再变化：
-   ```css
-   .mmd-svg foreignObject div{line-height:1.5}
-   ```
-3. 验证必须在**真实宿主页**（Tailwind 已加载）逐节点实测裁切，任一不满足即有裁切：
-   ```js
-   [...document.querySelectorAll('.mmd-svg g.node')].filter(n => {
-     const fo = n.querySelector('foreignObject'); const d = fo?.querySelector('div');
-     return d && d.getBoundingClientRect().height > parseFloat(fo.getAttribute('height')) + 0.5;
-   })
-   ```
-
-### 坑 6：宽图被 `max-width:100%` 整体压小 + 二次替换的正则陷阱
-
-mermaid 根节点自带 `width="100%"` + **内联** `style="max-width:XXXpx"`，配合 `.mmd-svg svg{max-width:100%}` 会把 2000+px 宽的图整体压进 ~1100px 卡片（约 45% 缩放），16px 文字缩到 7px。内联 style 优先级高于样式表——CSS 里写 `max-width:none` 会被它压住，**必须在脚本化替换时处理根标签**：
-
-1. 剥掉根 svg 的内联 `style`/`width`/`height` 属性，按 viewBox 宽度设显式 `width` 属性；
-2. CSS 用 `.mmd-svg svg{max-width:none;height:auto}`——`.mmd-svg` 已有 `overflow-x:auto`，宽图按自然尺寸横向滚动、文字保持原始大小；窄图不受影响；
-3. 图源层面优先把自然宽度压到 ≈ 卡片宽度以内，避免用户横向滚动：节点标签长字段列表用 `<br/>` 折行；并列的无关节点用不可见边 `A ~~~ B` 改纵向堆叠（mermaid 9.4+ 支持）；
-4. **二次维护（替换已内联的 SVG）时，块匹配用 `(<div class="mmd-svg">).*?(</svg>)`，结尾锚在 `</svg>` 上**——flowchart-v2 标签里的 `foreignObject` 含 `</div>`，非贪婪匹配到第一个 `</div>` 会把旧图拦腰截断，残骸散落在页面里变成裸文本，且 div 配对数被破坏。
-
----
-
-## 第四步：输出文件
-
-1. **写入路径**：默认输出到**当前项目文件夹**（即当前工作目录）下的 `.doc-visualizer-output/` 目录：
-   ```bash
-   mkdir -p .doc-visualizer-output
-   ```
-   输出文件：`.doc-visualizer-output/<filename>.html`
-   > 默认一律使用当前工作目录下的 `.doc-visualizer-output/`；仅当用户明确指定了其他输出路径时，遵循用户指定。
-
-2. **文件名规则**：`<文档日期>_<文档主题简称>.html`，例如 `2026-08-08_概念数据接入.html`
-
-3. **打开文件**（WSL/Linux 优先 xdg-open，若失败提示路径）：
-   ```bash
-   xdg-open .doc-visualizer-output/xxx.html 2>/dev/null || \
-   explorer.exe "$(wslpath -w "$(pwd)/.doc-visualizer-output/xxx.html")" 2>/dev/null || \
-   echo "请在浏览器中打开: $(pwd)/.doc-visualizer-output/xxx.html"
-   ```
-
-4. 告知用户文件路径（绝对路径）。
-
----
-
-## 生成质量检查清单
-
-在写入文件前，心智扫描以下问题：
-
+**结构**
 - [ ] `charset="UTF-8"` 在 `<head>` 首行
-- [ ] 所有 CDN script 标签正确，Alpine.js 有 `defer`
-- [ ] Alpine.js `x-data` 在需要状态的**父容器**上，不是子元素上
-- [ ] Mermaid CDN 版本已**锁定精确版本**（如 `@10.9.8`），没有 `@10` 这种漂移写法
-- [ ] Mermaid 图文本中无裸露 `<` `>`（含 `&lt;` `&gt;` 实体，会被浏览器解码后触发箭头解析）
-- [ ] `stateDiagram-v2` 的过渡标签无 `<br/>`
-- [ ] 标签页/折叠容器里的图：要么静态 SVG，要么 `startOnLoad:false` + 切标签懒渲染
-- [ ] 若用静态 SVG：`<div>` 类名不含 `mermaid`，页面无任何运行时 mermaid 引用
-- [ ] 静态 SVG 生成时已注入与宿主一致的行高（`div{line-height:1.5}`，见坑 5），页面已加 `.mmd-svg foreignObject div{line-height:1.5}`
-- [ ] 根 svg 无内联 `style`/`width`/`height`，已按 viewBox 设显式 `width`；CSS 为 `max-width:none`（自然尺寸 + 横向滚动，见坑 6）
-- [ ] 图自然宽度尽量 ≤ 卡片宽度（节点文本折行、不可见边纵向堆叠），宽图保证横向滚动可用
-- [ ] 标签页的 `x-show` 对应 `tab==='xxx'` 字符串精确匹配
-- [ ] 文档中的 `<` `>` `&` 在 HTML 文本节点中已转义为 `&lt;` `&gt;` `&amp;`
-- [ ] 移动端友好（使用 `sm:` `md:` 响应式前缀或 `overflow-x-auto`）
-- [ ] 所有中文内容正确保留，无截断
+- [ ] Alpine 的 `x-data` 在**所有 `x-show` 面板的公共父容器**上，不是子元素上
+- [ ] 每个面板 `x-show` + `x-cloak`；`tab==='xxx'` 字符串精确匹配
+- [ ] 可展开卡优先用原生 `<details>`（零 JS 风险）
+- [ ] 移动端友好（`sm:`/`md:` 前缀或 `overflow-x-auto`）
 
-### 渲染验证（写入后必做）
+**图**
+- [ ] 每图 `width`/`height` 与**等值** `viewBox`；容器 `overflow-x:auto` + CSS `max-width:none;height:auto`
+- [ ] 根 `<svg>` 显式设了 `font-family`；配了 `role="img"` + `aria-label`
+- [ ] 容器类名不含 `mermaid` 字面量；一个文件里只用一种容器类名
+- [ ] 纵轴旋转标题压到 **≤4 字**（单位挪进图标题）
+- [ ] 长句宽度已估算，右侧栏（徽章/图例）起点 ≥ 左侧最长句右边界 + 8px
+- [ ] 多行文字拆成多个 `<text>`（SVG 不自动换行）
 
-- 语法校验（node + jsdom 只能查 parse，**查不出布局 NaN**）：
-  ```bash
-  npm install mermaid@10.9.8 jsdom
-  node -e "const {JSDOM}=require('jsdom'); const d=new JSDOM('<body>'); global.window=d.window; global.document=d.window.document; global.navigator=d.window.navigator; global.DOMPurify=d.window.DOMPurify; const m=require('mermaid').default; m.initialize({startOnLoad:false}); m.mermaidAPI.parse(process.argv[1]).then(()=>console.log('OK')).catch(e=>{console.error('FAIL',e.message.slice(0,300));process.exit(1)});" '你的图文本'"
-  ```
-- **布局/NaN 必须用真实浏览器验证**（jsdom 无 getBBox 布局）：puppeteer-core + chrome-for-testing（下载命令见"坑 4"），逐标签点击后检查：
-  ```js
-  // SVG 元素没有 offsetWidth！可见性用 getBoundingClientRect
-  [...document.querySelectorAll('.mmd-svg svg')].filter(s=>s.getBoundingClientRect().width>0)
-  // NaN 检查：/translate\(undefined,\s*NaN\)/.test(svg.innerHTML)
-  ```
-- **标签裁切必须在真实宿主页实测**（干净渲染环境与 jsdom 都查不出，见坑 5）：Tailwind 加载后逐节点比对 foreignObject 高度与标签实际高度，结果应为 0：
-  ```js
-  [...document.querySelectorAll('.mmd-svg g.node')].filter(n => {
-    const fo = n.querySelector('foreignObject'); const d = fo?.querySelector('div');
-    return d && d.getBoundingClientRect().height > parseFloat(fo.getAttribute('height')) + 0.5;
-  }).length
-  ```
-- 展开折叠卡片用 `Alpine.$data(card).open = true`（幂等），**不要循环 `button.click()`**——验证脚本每个标签页点一遍展开按钮，会把前一个标签页已展开的卡片再点回收起，轮到目标标签页时恰好全是收起状态，截图误判"展开失败"。
-- 控制台必须 0 错误（监听 `console` 与 `pageerror` 事件）。
-- 最后**按自然分辨率裁剪放大**多行节点（含高亮/最长标签的节点）目检：文字完整、不贴框、无宿主页 CSS 污染。
-
----
-
-## 页面整体 HTML 骨架
-
-> 推荐：图用**预渲染静态 SVG**（见"渲染坑与根治"），骨架里没有任何 mermaid 运行时引用。
-> 若坚持运行时 mermaid：加回锁版本的 CDN `<script>` + `mermaid.initialize({startOnLoad:false,...})`，并在 `<main>` 上加懒渲染逻辑（见"坑 3"）。
-
-```html
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><!-- 文档标题 --></title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-  <style>
-    [x-cloak]{display:none!important}
-    .tab-content{display:none}
-    /* 静态 SVG：自然尺寸 + 卡片内横向滚动（不整图压小），行高锁定防标签裁切 */
-    .mmd-svg{overflow-x:auto}
-    .mmd-svg svg{max-width:none;height:auto}
-    .mmd-svg foreignObject div{line-height:1.5}
-  </style>
-</head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-
-  <!-- 顶部 Hero -->
-  <header class="bg-gradient-to-r from-slate-900 to-slate-700 text-white px-6 py-8">
-    <div class="max-w-5xl mx-auto">
-      <p class="text-slate-400 text-sm mb-1"><!-- 日期 --></p>
-      <h1 class="text-2xl font-bold mb-2"><!-- 标题 --></h1>
-      <p class="text-slate-300 max-w-2xl"><!-- 一句话摘要 --></p>
-      <!-- 关键统计数字徽章 -->
-      <div class="flex flex-wrap gap-2 mt-4">
-        <span class="bg-white/10 rounded-full px-3 py-1 text-sm">5 条里程碑</span>
-        <span class="bg-red-500/30 rounded-full px-3 py-1 text-sm">5 条红线</span>
-        <span class="bg-amber-500/30 rounded-full px-3 py-1 text-sm">7 个假设</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- 主内容 -->
-  <main class="max-w-5xl mx-auto px-4 py-8" x-data="{tab:'overview'}">
-    <!-- 标签导航 -->
-    <div class="flex gap-1 border-b mb-6 overflow-x-auto">
-      <button @click="tab='overview'"
-        :class="tab==='overview'?'border-b-2 border-blue-600 text-blue-600':'text-gray-600'"
-        class="px-4 py-2 text-sm font-medium whitespace-nowrap">概览</button>
-      <!-- 其余标签... -->
-    </div>
-    <!-- 标签内容：图直接放静态 SVG -->
-    <div x-show="tab==='overview'" x-cloak>
-      <div class="overflow-x-auto bg-white border border-gray-200 rounded-xl p-4">
-        <div class="mmd-svg"><!-- 此处为预渲染好的 <svg>...</svg> --></div>
-      </div>
-    </div>
-  </main>
-
-</body>
-</html>
-```
-
----
-
-## 典型调用示例
-
-- `把 market_observer/docs/2026-08-08_概念数据接入方案.md 做成交互式可视化`
-- `帮我用图表理解这份设计文档`
-- `将这两份方案文档合并成一个可视化仪表板`
-- `make an interactive dashboard for this architecture doc`
-- `visualize the milestone dependencies in this plan`
+**验证（缺一不可）**
+- [ ] 断言全绿，且**同时包含**越界断言与文本重叠（TEXT-OVERLAP）断言
+- [ ] 已对每张图 + 每处窄列区域做 2× 定向裁剪目检
+- [ ] 每轮改完重跑全套（含重建编译产物）

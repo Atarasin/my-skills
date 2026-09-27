@@ -22,10 +22,10 @@
           "patterns": ["红线", "里程碑", "概念数据", "M0", "M1", "M2", "M3"]
         },
         {
-          "name": "cdn_libraries_present",
-          "description": "引用了 Tailwind CSS 和 Alpine.js CDN",
+          "name": "css_js_libraries_present",
+          "description": "含 Tailwind CSS 与 Alpine.js（内联或 CDN 任一形态均可）。注意：内联产物里不出现 'tailwindcss' 与 'mermaid' 字样（内联后已无运行时依赖），故只断言 tailwind / alpine",
           "type": "content_contains",
-          "patterns": ["tailwindcss", "alpinejs", "mermaid"]
+          "patterns": ["tailwind", "alpine"]
         },
         {
           "name": "tab_navigation",
